@@ -1,25 +1,31 @@
-import logo from './logo.svg';
+import { useEffect, useState } from 'react';
 import './App.css';
+import MyButton from './MyButton';
+
+const restEndpoint =
+    "https://monitor.slavapmk.ru/api/data?start=2025-11-27%2013:25&end=2025-11-27%2021:25&rooms=total";
 
 function App() {
-  return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
-  );
+    const [text, setText] = useState("");
+
+    useEffect(() => {
+        const load = async () => {
+            const res = await fetch(restEndpoint);
+            const t = await res.text();   // ← вот это даёт строку
+            setText(t);
+        };
+
+        load();
+    }, []);
+
+    return (
+        <div className="App">
+            <header className="App-header">
+                <MyButton name="jhguyuygh" />
+                <div>{text}</div>  {/* ← сюда вставляется весь текст ответа */}
+            </header>
+        </div>
+    );
 }
 
 export default App;
