@@ -36,3 +36,132 @@
     transform: rotate(360deg);
   }
 }
+
+.app-dark {
+    min-height: 100vh;
+    background-color: #1e1e1e;
+    color: white;
+}
+/* Buttons */
+.app-dark .btn {
+    background-color: #333 !important;
+    color: #fff !important;
+    border-radius: 8px;
+    border: 1px solid #555;
+    padding: 8px 14px;
+}
+
+.app-dark .btn:hover {
+    background-color: #444 !important;
+    border-color: #777 !important;
+}
+
+/* Inputs */
+.app-dark input,
+.app-dark select,
+.app-dark textarea {
+    background-color: #2a2a2a !important;
+    color: #fff !important;
+    border: 1px solid #555 !important;
+    border-radius: 6px;
+    padding: 6px 10px;
+}
+
+.app-dark input:focus,
+.app-dark select:focus,
+.app-dark textarea:focus {
+    border-color: #888 !important;
+    outline: none;
+    box-shadow: 0 0 5px rgba(255,255,255,0.2) !important;
+}
+
+
+/* === Light/Dark Theme Toggle === */
+:root {
+    --bg: #1a1a1a;
+    --bg-alt: #222;
+    --text: #e0e0e0;
+    --border: #444;
+    --primary: #3b82f6;
+    --primary-hover: #2563eb;
+}
+
+body.light {
+    --bg: #fafafa;
+    --bg-alt: #fff;
+    --text: #111;
+    --border: #ccc;
+    --primary: #2563eb;
+    --primary-hover: #1d4ed8;
+}
+
+/* Toggle button */
+.theme-toggle {
+    position: fixed;
+    top: 16px;
+    right: 16px;
+    padding: 8px 14px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--bg-alt);
+    color: var(--text);
+    cursor: pointer;
+    transition: 0.2s;
+}
+.theme-toggle:hover {
+    background: var(--border);
+}
+
+
+/* === Styled Buttons === */
+button {
+    padding: 10px 16px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--primary);
+    color: #fff;
+    cursor: pointer;
+    font-size: 15px;
+    transition: 0.2s;
+}
+button:hover {
+    background: var(--primary-hover);
+}
+button:disabled {
+    opacity: 0.6;
+    cursor: default;
+}
+
+/* Secondary button */
+button.secondary {
+    background: var(--bg-alt);
+    color: var(--text);
+}
+button.secondary:hover {
+    background: var(--border);
+}
+
+/* === Input & Select Fields === */
+input, select {
+    width: 100%;
+    padding: 10px;
+    border-radius: 8px;
+    background: var(--bg-alt);
+    border: 1px solid var(--border);
+    color: var(--text);
+    transition: 0.2s;
+}
+input:focus, select:focus {
+    outline: none;
+    border-color: var(--primary);
+}
+
+/* Scrollbar for the select */
+select::-webkit-scrollbar {
+    width: 8px;
+}
+select::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 6px;
+}
+
