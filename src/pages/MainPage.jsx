@@ -47,9 +47,7 @@ export default function EthercheckGraphPage() {
             })
             .then((data) => {
                 if (!mounted) return;
-
                 const rooms = (data?.rooms && Array.isArray(data.rooms)) ? data.rooms : [];
-
                 setRooms(rooms);
                 if (rooms.length > 0) {
                     setSelectedRooms([rooms[0]]);
@@ -57,9 +55,7 @@ export default function EthercheckGraphPage() {
             })
             .finally(() => mounted && setLoadingRooms(false));
 
-        return () => {
-            mounted = false;
-        };
+        return () => { mounted = false; };
     }, []);
 
     function toggleRoom(room) {
@@ -72,14 +68,8 @@ export default function EthercheckGraphPage() {
 
     const formatDateForApi = (dateTimeLocalString) => {
         if (!dateTimeLocalString) return "";
-
-        // Если вдруг уже с пробелом — просто вернём как есть
         if (dateTimeLocalString.includes(" ")) return dateTimeLocalString;
-
-        // Заменяем T на пробел и обрезаем секунды (и миллисекунды), если они есть
-        return dateTimeLocalString
-            .replace("T", " ")        // 2025-12-02T03:46 → 2025-12-02 03:46
-            .slice(0, 16);            // обрезаем до YYYY-MM-DD HH:MM
+        return dateTimeLocalString.replace("T", " ").slice(0, 16);
     };
 
     async function fetchGraph() {
@@ -91,7 +81,6 @@ export default function EthercheckGraphPage() {
             if (selectedRooms.length === 0) throw new Error("Выберите комнаты");
             const params = new URLSearchParams();
 
-            // Форматируем даты правильно
             params.append("start", formatDateForApi(dateStart));
             params.append("end", formatDateForApi(dateEnd));
             params.append("rooms", selectedRooms.join(","))
@@ -121,32 +110,28 @@ export default function EthercheckGraphPage() {
     }
 
     return (
-        <div
-            className="min-h-screen bg-[#0B1120] text-slate-200 flex flex-col items-center py-8 px-4 font-sans selection:bg-sky-500/30">
+        <div className="min-h-screen bg-[#0B1120] text-slate-200 flex flex-col items-center py-8 px-4 font-sans selection:bg-sky-500/30">
 
             {/* Фоновое свечение */}
             <div className="fixed top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
-                <div
-                    className="absolute top-[-10%] left-[10%] w-[500px] h-[500px] bg-blue-600/10 rounded-full blur-[100px]"/>
-                <div
-                    className="absolute bottom-[-10%] right-[10%] w-[500px] h-[500px] bg-purple-600/10 rounded-full blur-[100px]"/>
+                <div className="absolute top-[-10%] left-[10%] w-[500px] h-[500px] bg-blue-600/10 rounded-full blur-[100px]"/>
+                <div className="absolute bottom-[-10%] right-[10%] w-[500px] h-[500px] bg-purple-600/10 rounded-full blur-[100px]"/>
             </div>
 
             {/* Хедер */}
             <header className="w-full max-w-6xl flex items-center gap-3 mb-8 z-10">
                 <div className="relative flex h-3 w-3">
-                    <span
-                        className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-75"></span>
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-75"></span>
                     <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
                 </div>
+                {/* НОВОЕ НАЗВАНИЕ */}
                 <h1 className="text-xl font-bold tracking-wide text-white">
-                    Ethercheck <span className="text-slate-500 font-normal">/ Monitor</span>
+                    Monitoring
                 </h1>
             </header>
 
             {/* Основная панель */}
-            <div
-                className="w-full max-w-6xl bg-slate-900/80 backdrop-blur-xl rounded-2xl border border-slate-800 shadow-2xl p-6 z-10">
+            <div className="w-full max-w-6xl bg-slate-900/80 backdrop-blur-xl rounded-2xl border border-slate-800 shadow-2xl p-6 z-10">
 
                 {/* Кнопки времени */}
                 <div className="flex flex-wrap gap-2 mb-8">
@@ -200,25 +185,25 @@ export default function EthercheckGraphPage() {
                             <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
                                 Комнаты ({selectedRooms.length})
                             </span>
-                            {/* Исправленные кнопки: Белые */}
                             <div className="flex gap-3">
+                                {/* Кнопка: Текст белый */}
                                 <button
                                     onClick={() => setSelectedRooms(rooms)}
-                                    className="text-[10px] font-bold text-white/60 hover:text-white uppercase transition-colors"
+                                    className="text-[10px] font-bold text-white hover:text-sky-300 uppercase transition-colors"
                                 >
                                     Выбрать все
                                 </button>
+                                {/* Кнопка: Текст белый */}
                                 <button
                                     onClick={() => setSelectedRooms([])}
-                                    className="text-[10px] font-bold text-white/60 hover:text-white uppercase transition-colors"
+                                    className="text-[10px] font-bold text-white hover:text-rose-300 uppercase transition-colors"
                                 >
                                     Сброс
                                 </button>
                             </div>
                         </div>
 
-                        <div
-                            className="flex-1 bg-[#0F172A] border border-slate-700 rounded-xl overflow-hidden flex flex-col">
+                        <div className="flex-1 bg-[#0F172A] border border-slate-700 rounded-xl overflow-hidden flex flex-col">
                             {loadingRooms ? (
                                 <div className="flex items-center justify-center h-full text-xs text-slate-500">
                                     Загрузка...
@@ -258,12 +243,13 @@ export default function EthercheckGraphPage() {
                         {loadingGraph ? "Загрузка данных..." : "Построить график"}
                     </button>
 
+                    {/* Кнопка ОЧИСТИТЬ: Текст белый */}
                     <button
                         onClick={() => {
                             setGraphResult(null);
                             setError(null);
                         }}
-                        className="px-6 py-3 rounded-xl border border-slate-700 text-slate-400 hover:text-white hover:bg-slate-800 transition-colors font-medium"
+                        className="px-6 py-3 rounded-xl border border-slate-700 text-white hover:bg-slate-800 transition-colors font-medium"
                     >
                         Очистить
                     </button>
@@ -271,8 +257,7 @@ export default function EthercheckGraphPage() {
             </div>
 
             {/* График */}
-            <div
-                className="w-full max-w-6xl mt-8 bg-slate-900/80 backdrop-blur-xl rounded-2xl border border-slate-800 shadow-2xl p-6 md:p-8 z-10">
+            <div className="w-full max-w-6xl mt-8 bg-slate-900/80 backdrop-blur-xl rounded-2xl border border-slate-800 shadow-2xl p-6 md:p-8 z-10">
                 <div className="flex items-center justify-between mb-6">
                     <h2 className="text-lg font-semibold text-white">
                         Мониторинг
@@ -286,12 +271,9 @@ export default function EthercheckGraphPage() {
 
                 <div className="w-full h-[500px] bg-[#0B1120] border border-slate-800 rounded-xl p-4 relative">
                     {!graphResult && !loadingGraph && (
-                        <div
-                            className="absolute inset-0 flex flex-col items-center justify-center text-slate-500 pointer-events-none">
-                            <svg className="w-12 h-12 mb-3 opacity-20" fill="none" stroke="currentColor"
-                                 viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5"
-                                      d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"></path>
+                        <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-500 pointer-events-none">
+                            <svg className="w-12 h-12 mb-3 opacity-20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"></path>
                             </svg>
                             <p className="text-sm">Выберите комнаты и нажмите «Построить график»</p>
                         </div>
@@ -302,19 +284,15 @@ export default function EthercheckGraphPage() {
 
             {/* Блок ошибок (с закрытием) */}
             {error && (
-                <div
-                    className="fixed bottom-8 right-8 max-w-md bg-red-900/95 text-white pl-6 pr-10 py-4 rounded-xl shadow-2xl border border-red-500/50 backdrop-blur animate-bounce-in z-50">
+                <div className="fixed bottom-8 right-8 max-w-md bg-red-900/95 text-white pl-6 pr-10 py-4 rounded-xl shadow-2xl border border-red-500/50 backdrop-blur animate-bounce-in z-50">
                     <div className="font-bold text-sm mb-1">Ошибка</div>
                     <div className="text-xs opacity-90">{error}</div>
-
-                    {/* Крестик закрытия */}
                     <button
                         onClick={() => setError(null)}
                         className="absolute top-2 right-2 p-1 text-white/50 hover:text-white hover:bg-white/10 rounded-full transition-colors"
                     >
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
-                                  d="M6 18L18 6M6 6l12 12"></path>
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
                         </svg>
                     </button>
                 </div>
