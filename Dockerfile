@@ -1,16 +1,16 @@
-FROM node:20-alpine
-
-COPY package*.json ./
-
-RUN npm install
-
-COPY . .
-
+# frontend/Dockerfile — продакшн-версия
+FROM node:20-alpine AS builder
 WORKDIR /app
+COPY package*.json ./
+RUN npm ci
+COPY . .
+RUN npm run build -- --configuration production
 
-ENV HOST=0.0.0.0
-ENV PORT=3000
+# Лёгкий nginx для статики
+FROM nginx:alpine
+COPY --from=builder /app/build /usr/share/nginx/html
 
-EXPOSE 3000
+# Наш мини-конфиг nginx
+COPY nginx-prod.conf /etc/nginx/conf.d/default.conf
 
-CMD ["npm", "start"]
+EXPOSE 8080
