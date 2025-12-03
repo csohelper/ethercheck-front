@@ -61,6 +61,7 @@ export default function EthercheckGraphPage() {
             })
             .catch((err) => {
                 console.error(err);
+                // Демо данные на случай ошибки
                 if (mounted) setRooms(["204", "430", "536"]);
             })
             .finally(() => mounted && setLoadingRooms(false));
@@ -69,7 +70,7 @@ export default function EthercheckGraphPage() {
     }, []);
 
     function toggleRoom(roomValue) {
-        setGraphResult(null);
+        setGraphResult(null); // Сброс графика при смене выбора
 
         if (roomValue === "total") {
             setSelectedRooms(['total']);
@@ -79,10 +80,13 @@ export default function EthercheckGraphPage() {
             setSelectedRooms([]);
         } else {
             setIsSummaryMode(false);
+
             let currentSelection = selectedRooms;
+            // Если был выбран спец. режим - сбрасываем
             if (selectedRooms.includes('total') || isSummaryMode) {
                 currentSelection = [];
             }
+
             if (currentSelection.includes(roomValue)) {
                 setSelectedRooms(currentSelection.filter(r => r !== roomValue));
             } else {
@@ -104,7 +108,9 @@ export default function EthercheckGraphPage() {
 
         try {
             let roomsParam = "";
+
             if (isSummaryMode) {
+                // При суммарном режиме запрашиваем все комнаты для расчета на фронте
                 roomsParam = rooms.join(",");
             } else if (selectedRooms.includes("total")) {
                 roomsParam = "total";
@@ -119,7 +125,11 @@ export default function EthercheckGraphPage() {
             params.append("rooms", roomsParam);
 
             const url = `https://monitor.slavapmk.ru/api/graph?${params.toString()}`;
-            const res = await fetch(url, { method: "GET", headers: {"Accept": "application/json"} });
+
+            const res = await fetch(url, {
+                method: "GET",
+                headers: {"Accept": "application/json"}
+            });
 
             if (!res.ok) {
                 const text = await res.text();
@@ -128,6 +138,7 @@ export default function EthercheckGraphPage() {
 
             const data = await res.json();
             setGraphResult(data);
+
         } catch (err) {
             console.error(err);
             setError(err.message);
@@ -161,11 +172,13 @@ export default function EthercheckGraphPage() {
     return (
         <div className="min-h-screen bg-[#0B1120] text-slate-200 flex flex-col items-center py-4 md:py-8 px-3 md:px-4 font-sans selection:bg-sky-500/30">
 
+            {/* Фоновые эффекты */}
             <div className="fixed top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
                 <div className="absolute top-[-10%] left-[10%] w-[300px] md:w-[500px] h-[300px] md:h-[500px] bg-blue-600/10 rounded-full blur-[60px] md:blur-[100px]" />
                 <div className="absolute bottom-[-10%] right-[10%] w-[300px] md:w-[500px] h-[300px] md:h-[500px] bg-purple-600/10 rounded-full blur-[60px] md:blur-[100px]" />
             </div>
 
+            {/* Заголовок */}
             <header className="w-full max-w-6xl flex flex-col md:flex-row items-center md:justify-start gap-3 mb-6 md:mb-8 z-10 text-center md:text-left">
                 <div className="flex items-center gap-3">
                     <div className="relative flex h-3 w-3">
@@ -181,7 +194,7 @@ export default function EthercheckGraphPage() {
             {/* Панель управления */}
             <div className="w-full max-w-6xl bg-slate-900/80 backdrop-blur-xl rounded-2xl border border-slate-800 shadow-2xl p-4 md:p-6 z-10">
 
-                {/* Кнопки времени - скролл на мобилке */}
+                {/* Кнопки времени (скролл на мобильных) */}
                 <div className="flex overflow-x-auto pb-2 md:pb-0 gap-2 mb-6 custom-scrollbar">
                     {[
                         { label: '1 час', val: 1 },
@@ -200,7 +213,7 @@ export default function EthercheckGraphPage() {
                     ))}
                 </div>
 
-                {/* Сетка: 1 колонка на мобильном, 3 на десктопе */}
+                {/* Сетка настроек: 1 колонка моб, 3 десктоп */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8 mb-6">
 
                     <div>
@@ -275,6 +288,7 @@ export default function EthercheckGraphPage() {
                     </div>
                 </div>
 
+                {/* Кнопки действий */}
                 <div className="flex flex-col md:flex-row items-center gap-4 pt-6 border-t border-slate-800">
                     <button
                         onClick={fetchGraph}
@@ -293,7 +307,7 @@ export default function EthercheckGraphPage() {
                 </div>
             </div>
 
-            {/* График */}
+            {/* Блок графика */}
             <div className="w-full max-w-6xl mt-6 md:mt-8 bg-slate-900/80 backdrop-blur-xl rounded-2xl border border-slate-800 shadow-2xl p-4 md:p-8 z-10">
                 <div className="flex items-center justify-between mb-4 md:mb-6">
                     <h2 className="text-base md:text-lg font-semibold text-white">
@@ -307,16 +321,34 @@ export default function EthercheckGraphPage() {
                 </div>
 
                 <div className="w-full h-[350px] md:h-[500px] bg-[#0B1120] border border-slate-800 rounded-xl p-2 md:p-4 relative overflow-hidden">
+
+                    {/* 1. Заглушка (показывается, когда НЕТ данных и НЕ идет загрузка) */}
                     {!graphResult && !loadingGraph && (
                         <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-500 pointer-events-none text-center px-4">
                             <svg className="w-10 h-10 md:w-12 md:h-12 mb-3 opacity-20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"></path></svg>
                             <p className="text-xs md:text-sm">Выберите параметры и нажмите «Построить график»</p>
                         </div>
                     )}
-                    <EthercheckChart data={graphResult} isSummary={isSummaryMode} />
+
+                    {/* 2. Индикатор загрузки */}
+                    {loadingGraph && (
+                        <div className="absolute inset-0 flex flex-col items-center justify-center text-sky-500 z-20 bg-[#0B1120]/50 backdrop-blur-sm">
+                            <div className="relative flex h-8 w-8 mb-3">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-sky-500 opacity-75"></span>
+                                <span className="relative inline-flex rounded-full h-8 w-8 bg-sky-600"></span>
+                            </div>
+                            <span className="text-xs font-semibold tracking-wider uppercase">Загрузка данных...</span>
+                        </div>
+                    )}
+
+                    {/* 3. Сам график (рендерится ТОЛЬКО если есть данные) */}
+                    {graphResult && (
+                        <EthercheckChart data={graphResult} isSummary={isSummaryMode} />
+                    )}
                 </div>
             </div>
 
+            {/* Уведомление об ошибке */}
             {error && (
                 <div className="fixed bottom-4 right-4 md:bottom-8 md:right-8 max-w-[90%] md:max-w-md bg-red-900/95 text-white pl-5 pr-10 py-4 rounded-xl shadow-2xl border border-red-500/50 backdrop-blur animate-bounce-in z-50">
                     <div className="font-bold text-sm mb-1">Ошибка</div>
