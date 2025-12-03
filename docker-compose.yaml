@@ -1,0 +1,10 @@
+services:
+  ethercheck-front:
+    build:
+      context: .
+    working_dir: /app
+    volumes:
+      - ./data/front:/app/data
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
