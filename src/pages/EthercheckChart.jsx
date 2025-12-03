@@ -1,16 +1,7 @@
 import React from 'react';
-import {
-    LineChart,
-    Line,
-    XAxis,
-    YAxis,
-    CartesianGrid,
-    Tooltip,
-    ResponsiveContainer,
-    Legend
-} from 'recharts';
+import {CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis} from 'recharts';
 
-export default function EthercheckChart({ data }) {
+export default function EthercheckChart({data}) {
     // Проверка на наличие данных
     if (!data || !data.datasets || data.datasets.length === 0) {
         return (
@@ -30,7 +21,7 @@ export default function EthercheckChart({ data }) {
         dataset.data.forEach((point) => {
             const timeKey = point.x;
             if (!processedDataMap[timeKey]) {
-                processedDataMap[timeKey] = { time: timeKey };
+                processedDataMap[timeKey] = {time: timeKey};
             }
             // Сохраняем значение процента потерь
             processedDataMap[timeKey][label] = point.y;
@@ -45,8 +36,10 @@ export default function EthercheckChart({ data }) {
     // Форматирование времени (ЧЧ:ММ)
     const formatTime = (tickItem) => {
         try {
-            return new Date(tickItem).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        } catch (e) { return tickItem; }
+            return new Date(tickItem).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
+        } catch (e) {
+            return tickItem;
+        }
     };
 
     // Форматирование даты в подсказке
@@ -55,7 +48,9 @@ export default function EthercheckChart({ data }) {
             return new Date(label).toLocaleString([], {
                 month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
             });
-        } catch (e) { return label; }
+        } catch (e) {
+            return label;
+        }
     };
 
     // Яркие цвета для линий (палитра)
@@ -66,22 +61,22 @@ export default function EthercheckChart({ data }) {
 
     return (
         <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={chartData} margin={{ top: 20, right: 10, left: 0, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} />
+            <LineChart data={chartData} margin={{top: 20, right: 10, left: 0, bottom: 0}}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false}/>
 
                 {/* Ось X: Время */}
                 <XAxis
                     dataKey="time"
                     tickFormatter={formatTime}
                     stroke="#94a3b8"
-                    tick={{ fill: '#94a3b8', fontSize: 11 }}
+                    tick={{fill: '#94a3b8', fontSize: 11}}
                     minTickGap={35}
                 />
 
                 {/* Ось Y: Проценты */}
                 <YAxis
                     stroke="#94a3b8"
-                    tick={{ fill: '#94a3b8', fontSize: 11 }}
+                    tick={{fill: '#94a3b8', fontSize: 11}}
                     unit="%"
                     width={40}
                 />
@@ -96,7 +91,7 @@ export default function EthercheckChart({ data }) {
                         borderRadius: '8px',
                         boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.5)'
                     }}
-                    itemStyle={{ padding: '2px 0' }}
+                    itemStyle={{padding: '2px 0'}}
                     formatter={(value) => [`${value}%`]}
                 />
 
@@ -105,7 +100,7 @@ export default function EthercheckChart({ data }) {
                     verticalAlign="top"
                     height={40}
                     iconType="circle"
-                    wrapperStyle={{ paddingBottom: '10px', fontSize: '13px', color: '#cbd5e1' }}
+                    wrapperStyle={{paddingBottom: '10px', fontSize: '13px', color: '#cbd5e1'}}
                 />
 
                 {/* Рисуем линии */}
@@ -118,7 +113,7 @@ export default function EthercheckChart({ data }) {
                         stroke={dataset.borderColor || getLineColor(index)}
                         strokeWidth={2}
                         dot={false}
-                        activeDot={{ r: 5, strokeWidth: 0 }}
+                        activeDot={{r: 5, strokeWidth: 0}}
                         connectNulls={true}
                     />
                 ))}
