@@ -7,6 +7,7 @@ export default function EthercheckGraphPage() {
     const [selectedRooms, setSelectedRooms] = useState([]);
     const [isSummaryMode, setIsSummaryMode] = useState(false);
 
+    // Время по умолчанию: Сейчас минус 24 часа
     const [dateStart, setDateStart] = useState(() => {
         const d = new Date();
         d.setHours(d.getHours() - 24);
@@ -36,6 +37,7 @@ export default function EthercheckGraphPage() {
         setDateEnd(formatDateTime(end));
     }
 
+    // --- 1. ЗАГРУЗКА СПИСКА КОМНАТ И АВТО-ЗАПУСК ГРАФИКА ---
     useEffect(() => {
         const url = "https://monitor.slavapmk.ru/api/rooms";
         let mounted = true;
@@ -55,13 +57,19 @@ export default function EthercheckGraphPage() {
                 if (loaded.length > 0) {
                     const cleanRooms = loaded.filter(r => r !== "total" && r !== "summary");
                     setRooms(cleanRooms);
+
+                    // Устанавливаем дефолтный выбор в стейт
                     setSelectedRooms(["total"]);
                     setIsSummaryMode(false);
+
+                    // === ВАЖНО: АВТОЗАПУСК ===
+                    // Сразу вызываем функцию построения графика для 'total'
+                    // Передаем параметры вручную, так как стейт (selectedRooms) обновится не мгновенно
+                    fetchGraph(["total"]);
                 }
             })
             .catch((err) => {
                 console.error(err);
-                // Демо данные на случай ошибки
                 if (mounted) setRooms(["204", "430", "536"]);
             })
             .finally(() => mounted && setLoadingRooms(false));
@@ -70,7 +78,7 @@ export default function EthercheckGraphPage() {
     }, []);
 
     function toggleRoom(roomValue) {
-        setGraphResult(null); // Сброс графика при смене выбора
+        setGraphResult(null); // Сброс графика при клике
 
         if (roomValue === "total") {
             setSelectedRooms(['total']);
@@ -82,7 +90,6 @@ export default function EthercheckGraphPage() {
             setIsSummaryMode(false);
 
             let currentSelection = selectedRooms;
-            // Если был выбран спец. режим - сбрасываем
             if (selectedRooms.includes('total') || isSummaryMode) {
                 currentSelection = [];
             }
@@ -101,22 +108,33 @@ export default function EthercheckGraphPage() {
         return d.replace("T", " ").slice(0, 16);
     };
 
-    async function fetchGraph() {
+    // --- 2. ФУНКЦИЯ ПОСТРОЕНИЯ ГРАФИКА ---
+    // Добавил аргумент customRooms (опциональный), чтобы можно было вызвать при старте
+    async function fetchGraph(customRooms = null) {
         setError(null);
-        setGraphResult(null);
+
+        // Если это не автозапуск, сбрасываем старый результат, чтобы показать спиннер
+        if (!customRooms) setGraphResult(null);
+
         setLoadingGraph(true);
 
         try {
             let roomsParam = "";
 
-            if (isSummaryMode) {
-                // При суммарном режиме запрашиваем все комнаты для расчета на фронте
+            // Определяем, какие комнаты запрашивать: переданные вручную ИЛИ из стейта
+            // (customRooms нужен для автозапуска при F5)
+            const targetRooms = customRooms || selectedRooms;
+            const targetSummaryMode = customRooms ? false : isSummaryMode;
+
+            if (targetSummaryMode) {
+                // Если режим summary, берем все доступные комнаты (из стейта rooms)
+                // Примечание: при автозапуске rooms может быть еще пуст, но мы автозапускаем 'total', так что сюда не попадем
                 roomsParam = rooms.join(",");
-            } else if (selectedRooms.includes("total")) {
+            } else if (targetRooms.includes("total")) {
                 roomsParam = "total";
             } else {
-                if (selectedRooms.length === 0) throw new Error("Выберите комнаты");
-                roomsParam = selectedRooms.join(",");
+                if (targetRooms.length === 0) throw new Error("Выберите комнаты");
+                roomsParam = targetRooms.join(",");
             }
 
             const params = new URLSearchParams();
@@ -186,7 +204,7 @@ export default function EthercheckGraphPage() {
                         <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
                     </div>
                     <h1 className="text-lg md:text-xl font-bold tracking-wide text-white">
-                        Ethercheck
+                        Система Мониторинга Сети
                     </h1>
                 </div>
             </header>
@@ -291,7 +309,7 @@ export default function EthercheckGraphPage() {
                 {/* Кнопки действий */}
                 <div className="flex flex-col md:flex-row items-center gap-4 pt-6 border-t border-slate-800">
                     <button
-                        onClick={fetchGraph}
+                        onClick={() => fetchGraph()}
                         disabled={loadingGraph}
                         className="w-full md:flex-1 bg-gradient-to-r from-sky-600 to-blue-600 hover:from-sky-500 hover:to-blue-500 text-white font-semibold py-3 px-6 rounded-xl transition-all shadow-lg shadow-blue-900/20 disabled:opacity-50 active:scale-[0.98]"
                     >
@@ -322,7 +340,6 @@ export default function EthercheckGraphPage() {
 
                 <div className="w-full h-[350px] md:h-[500px] bg-[#0B1120] border border-slate-800 rounded-xl p-2 md:p-4 relative overflow-hidden">
 
-                    {/* 1. Заглушка (показывается, когда НЕТ данных и НЕ идет загрузка) */}
                     {!graphResult && !loadingGraph && (
                         <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-500 pointer-events-none text-center px-4">
                             <svg className="w-10 h-10 md:w-12 md:h-12 mb-3 opacity-20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"></path></svg>
@@ -330,7 +347,6 @@ export default function EthercheckGraphPage() {
                         </div>
                     )}
 
-                    {/* 2. Индикатор загрузки */}
                     {loadingGraph && (
                         <div className="absolute inset-0 flex flex-col items-center justify-center text-sky-500 z-20 bg-[#0B1120]/50 backdrop-blur-sm">
                             <div className="relative flex h-8 w-8 mb-3">
@@ -341,14 +357,12 @@ export default function EthercheckGraphPage() {
                         </div>
                     )}
 
-                    {/* 3. Сам график (рендерится ТОЛЬКО если есть данные) */}
                     {graphResult && (
                         <EthercheckChart data={graphResult} isSummary={isSummaryMode} />
                     )}
                 </div>
             </div>
 
-            {/* Уведомление об ошибке */}
             {error && (
                 <div className="fixed bottom-4 right-4 md:bottom-8 md:right-8 max-w-[90%] md:max-w-md bg-red-900/95 text-white pl-5 pr-10 py-4 rounded-xl shadow-2xl border border-red-500/50 backdrop-blur animate-bounce-in z-50">
                     <div className="font-bold text-sm mb-1">Ошибка</div>

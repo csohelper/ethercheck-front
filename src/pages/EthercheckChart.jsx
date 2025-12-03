@@ -15,19 +15,105 @@ const getLineColor = (index) => {
     return `hsl(${hues[index % hues.length]}, 85%, 60%)`;
 };
 
+// Радиус срабатывания "магнита" в пикселях
+const MAX_HOVER_DISTANCE = 50;
+
+const CustomTooltip = ({ active, payload, label, coordinate, chartHeight, yDomain, setHoveredDataKey }) => {
+
+    // Логика определения, над какой линией находится мышь
+    useEffect(() => {
+        if (active && payload && payload.length && coordinate) {
+            const mouseY = coordinate.y;
+            const [min, max] = yDomain;
+            const range = max - min;
+
+            let minDistance = Infinity;
+            let closestKey = null;
+
+            payload.forEach(entry => {
+                const val = typeof entry.value === 'number' ? entry.value : 0;
+                // Переводим значение в пиксели экрана
+                const pointY = chartHeight - ((val - min) / range) * chartHeight;
+                const dist = Math.abs(mouseY - pointY);
+
+                if (dist < minDistance) {
+                    minDistance = dist;
+                    closestKey = entry.dataKey;
+                }
+            });
+
+            // ЕСЛИ МЫШЬ ВНУТРИ РАДИУСА -> ПОДСВЕЧИВАЕМ
+            if (closestKey && minDistance <= MAX_HOVER_DISTANCE) {
+                setHoveredDataKey(closestKey);
+            } else {
+                setHoveredDataKey(null);
+            }
+        } else {
+            setHoveredDataKey(null);
+        }
+    }, [active, payload, coordinate, chartHeight, yDomain, setHoveredDataKey]);
+
+    if (!active || !payload || !payload.length || !coordinate) return null;
+
+    const mouseY = coordinate.y;
+    const [min, max] = yDomain;
+    const range = max - min;
+
+    // Ищем ближайшую точку для отображения в тултипе
+    const sorted = [...payload].sort((a, b) => {
+        const valA = typeof a.value === 'number' ? a.value : 0;
+        const valB = typeof b.value === 'number' ? b.value : 0;
+        const yA = chartHeight - ((valA - min) / range) * chartHeight;
+        const yB = chartHeight - ((valB - min) / range) * chartHeight;
+        return Math.abs(mouseY - yA) - Math.abs(mouseY - yB);
+    });
+
+    const closestPoint = sorted[0];
+
+    // Проверяем дистанцию еще раз для отрисовки самого тултипа
+    const valClosest = typeof closestPoint.value === 'number' ? closestPoint.value : 0;
+    const yClosest = chartHeight - ((valClosest - min) / range) * chartHeight;
+    const distClosest = Math.abs(mouseY - yClosest);
+
+    // ЕСЛИ МЫШЬ ДАЛЕКО -> СКРЫВАЕМ ТУЛТИП
+    if (distClosest > MAX_HOVER_DISTANCE) return null;
+
+    return (
+        <div className="bg-slate-900/95 border border-slate-700 text-slate-100 rounded-lg p-2 text-xs shadow-xl z-50">
+            <div className="mb-1 opacity-50 font-mono text-[10px]">
+                {new Date(label).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+            </div>
+            <div style={{ color: closestPoint.color }} className="font-bold flex items-center gap-2 text-sm">
+                <span className="w-2 h-2 rounded-full shadow-[0_0_4px_currentColor]" style={{backgroundColor: closestPoint.color}}></span>
+                {closestPoint.name}: {Number(closestPoint.value).toFixed(2)}%
+            </div>
+        </div>
+    );
+};
+
 export default function EthercheckChart({ data, isSummary }) {
     const containerRef = useRef(null);
-
-    // --- STATE ---
     const [xDomain, setXDomain] = useState([0, 0]);
     const [originalXDomain, setOriginalXDomain] = useState([0, 0]);
     const [yDomain, setYDomain] = useState([0, 100]);
-
     const [isDragging, setIsDragging] = useState(false);
     const lastMouseX = useRef(null);
     const lastTouchDist = useRef(null);
+    const [hoveredDataKey, setHoveredDataKey] = useState(null);
+    const [containerHeight, setContainerHeight] = useState(400);
 
-    // --- 1. ПОДГОТОВКА ДАННЫХ ---
+    useEffect(() => {
+        const updateHeight = () => {
+            if (containerRef.current) {
+                setContainerHeight(containerRef.current.clientHeight - 10);
+            }
+        };
+        updateHeight();
+        window.addEventListener('resize', updateHeight);
+        return () => window.removeEventListener('resize', updateHeight);
+    }, []);
+
+    // --- ПОДГОТОВКА ДАННЫХ ---
     const { chartData, finalDatasets } = useMemo(() => {
         if (!data || !data.datasets || data.datasets.length === 0) {
             return { chartData: [], finalDatasets: [] };
@@ -37,7 +123,7 @@ export default function EthercheckChart({ data, isSummary }) {
         let min = Infinity;
         let max = -Infinity;
 
-        data.datasets.forEach((dataset) => {
+        data.datasets.forEach((dataset, index) => {
             if (!dataset.data) return;
             const label = dataset.label;
             dataset.data.forEach((point) => {
@@ -59,17 +145,9 @@ export default function EthercheckChart({ data, isSummary }) {
                     .filter(k => k !== 'time' && k !== 'summary')
                     .map(k => point[k])
                     .filter(v => typeof v === 'number');
-
-                point.summary = values.length > 0
-                    ? values.reduce((a, b) => a + b, 0) / values.length
-                    : null;
+                point.summary = values.length > 0 ? values.reduce((a, b) => a + b, 0) / values.length : null;
             });
-            datasetsToRender = [{
-                name: 'Общий график',
-                dataKey: 'summary',
-                stroke: '#f59e0b',
-                strokeWidth: 3
-            }];
+            datasetsToRender = [{ name: 'Общий график', dataKey: 'summary', stroke: '#f59e0b', strokeWidth: 3 }];
         } else {
             datasetsToRender = data.datasets.map((ds, index) => ({
                 name: `Комната ${ds.label}`,
@@ -79,36 +157,28 @@ export default function EthercheckChart({ data, isSummary }) {
             }));
         }
 
-        return { chartData: sortedData, finalDatasets: datasetsToRender, minTime: min, maxTime: max };
+        return { chartData: sortedData, finalDatasets: datasetsToRender };
     }, [data, isSummary]);
 
-    // Инициализация границ
     useEffect(() => {
         if (chartData.length > 0) {
             const min = chartData[0].time;
             const max = chartData[chartData.length - 1].time;
             const buffer = (max - min) * 0.01;
-            const start = min - buffer;
-            const end = max + buffer;
-            setOriginalXDomain([start, end]);
-            setXDomain([start, end]);
+            setOriginalXDomain([min - buffer, max + buffer]);
+            setXDomain([min - buffer, max + buffer]);
         }
     }, [chartData]);
 
-    // --- 2. АВТО-ЗУМ ОСИ Y ---
+    // АВТО-ЗУМ Y
     useEffect(() => {
         if (!chartData.length) return;
         const [currentMin, currentMax] = xDomain;
         const [origMin, origMax] = originalXDomain;
-
         const isFullyZoomedOut = Math.abs(currentMin - origMin) < 60000 && Math.abs(currentMax - origMax) < 60000;
-        if (isFullyZoomedOut) {
-            setYDomain([0, 100]);
-            return;
-        }
+        if (isFullyZoomedOut) { setYDomain([0, 100]); return; }
         const visiblePoints = chartData.filter(p => p.time >= currentMin && p.time <= currentMax);
         if (visiblePoints.length === 0) return;
-
         let maxY = 0;
         const keysToCheck = finalDatasets.map(d => d.dataKey);
         visiblePoints.forEach(p => {
@@ -117,96 +187,63 @@ export default function EthercheckChart({ data, isSummary }) {
                 if (typeof val === 'number' && val > maxY) maxY = val;
             });
         });
-
         let calculatedMax = Math.ceil(maxY * 1.1);
         if (calculatedMax < 5) calculatedMax = 5;
         if (calculatedMax > 100) calculatedMax = 100;
         setYDomain([0, calculatedMax]);
     }, [xDomain, chartData, originalXDomain, finalDatasets]);
 
-    // --- 3. MOUSE WHEEL ZOOM ---
+    // MOUSE WHEEL
     useEffect(() => {
         const element = containerRef.current;
         if (!element) return;
-
         const onWheel = (e) => {
-            e.preventDefault();
-            e.stopPropagation();
+            e.preventDefault(); e.stopPropagation();
             const [currentMin, currentMax] = xDomain;
             const [origMin, origMax] = originalXDomain;
             if (origMin === 0 && origMax === 0) return;
-
             const duration = currentMax - currentMin;
             let ZOOM_FACTOR = 0.001 * Math.abs(e.deltaY);
             if (e.ctrlKey) ZOOM_FACTOR *= 2;
             if (ZOOM_FACTOR > 0.2) ZOOM_FACTOR = 0.2;
             if (ZOOM_FACTOR < 0.02) ZOOM_FACTOR = 0.02;
-
             let newMin, newMax;
             if (e.deltaY < 0) {
                 const delta = duration * ZOOM_FACTOR;
-                newMin = currentMin + delta;
-                newMax = currentMax - delta;
+                newMin = currentMin + delta; newMax = currentMax - delta;
             } else {
                 const delta = duration * ZOOM_FACTOR;
-                newMin = currentMin - delta;
-                newMax = currentMax + delta;
+                newMin = currentMin - delta; newMax = currentMax + delta;
                 if (newMin < origMin) newMin = origMin;
                 if (newMax > origMax) newMax = origMax;
             }
             if (newMax - newMin < 60000) return;
             setXDomain([newMin, newMax]);
         };
-
         element.addEventListener('wheel', onWheel, { passive: false });
         return () => element.removeEventListener('wheel', onWheel);
     }, [xDomain, originalXDomain]);
 
-
-    // --- 4. TOUCH EVENTS ---
+    // TOUCH & MOUSE HANDLERS
     useEffect(() => {
         const element = containerRef.current;
         if (!element) return;
-
-        const getDistance = (touches) => {
-            return Math.hypot(
-                touches[0].clientX - touches[1].clientX,
-                touches[0].clientY - touches[1].clientY
-            );
-        };
-
+        const getDistance = (touches) => Math.hypot(touches[0].clientX - touches[1].clientX, touches[0].clientY - touches[1].clientY);
         const updateDomainSafe = (newMin, newMax, origMin, origMax) => {
-            if (newMin < origMin) {
-                const diff = origMin - newMin;
-                newMin += diff;
-                newMax += diff;
-            }
-            if (newMax > origMax) {
-                const diff = newMax - origMax;
-                newMin -= diff;
-                newMax -= diff;
-            }
+            if (newMin < origMin) { const diff = origMin - newMin; newMin += diff; newMax += diff; }
+            if (newMax > origMax) { const diff = newMax - origMax; newMin -= diff; newMax -= diff; }
             if (newMax - newMin < 60000) return;
             setXDomain([newMin, newMax]);
         };
-
         const onTouchStart = (e) => {
-            if (e.touches.length === 1) {
-                setIsDragging(true);
-                lastMouseX.current = e.touches[0].clientX;
-            } else if (e.touches.length === 2) {
-                setIsDragging(false);
-                lastTouchDist.current = getDistance(e.touches);
-            }
+            if (e.touches.length === 1) { setIsDragging(true); lastMouseX.current = e.touches[0].clientX; }
+            else if (e.touches.length === 2) { setIsDragging(false); lastTouchDist.current = getDistance(e.touches); }
         };
-
         const onTouchMove = (e) => {
             if (e.cancelable) e.preventDefault();
-
             const [currentMin, currentMax] = xDomain;
             const [origMin, origMax] = originalXDomain;
             const duration = currentMax - currentMin;
-
             if (e.touches.length === 1 && isDragging) {
                 const currentClientX = e.touches[0].clientX;
                 const pixelDelta = lastMouseX.current - currentClientX;
@@ -214,36 +251,21 @@ export default function EthercheckChart({ data, isSummary }) {
                 const timeDelta = (pixelDelta / chartWidth) * duration;
                 updateDomainSafe(currentMin + timeDelta, currentMax + timeDelta, origMin, origMax);
                 lastMouseX.current = currentClientX;
-            }
-            else if (e.touches.length === 2 && lastTouchDist.current) {
+            } else if (e.touches.length === 2 && lastTouchDist.current) {
                 const dist = getDistance(e.touches);
                 const zoomFactor = lastTouchDist.current / dist;
                 const center = (currentMin + currentMax) / 2;
                 const newDuration = duration * zoomFactor;
-
-                let newMin = center - newDuration / 2;
-                let newMax = center + newDuration / 2;
-
-                if (newMin < origMin) newMin = origMin;
-                if (newMax > origMax) newMax = origMax;
-
-                if (newMax - newMin >= 60000) {
-                    setXDomain([newMin, newMax]);
-                }
+                let newMin = center - newDuration / 2; let newMax = center + newDuration / 2;
+                if (newMin < origMin) newMin = origMin; if (newMax > origMax) newMax = origMax;
+                if (newMax - newMin >= 60000) setXDomain([newMin, newMax]);
                 lastTouchDist.current = dist;
             }
         };
-
-        const onTouchEnd = () => {
-            setIsDragging(false);
-            lastMouseX.current = null;
-            lastTouchDist.current = null;
-        };
-
+        const onTouchEnd = () => { setIsDragging(false); lastMouseX.current = null; lastTouchDist.current = null; };
         element.addEventListener('touchstart', onTouchStart, { passive: false });
         element.addEventListener('touchmove', onTouchMove, { passive: false });
         element.addEventListener('touchend', onTouchEnd);
-
         return () => {
             element.removeEventListener('touchstart', onTouchStart);
             element.removeEventListener('touchmove', onTouchMove);
@@ -251,8 +273,6 @@ export default function EthercheckChart({ data, isSummary }) {
         };
     }, [xDomain, originalXDomain, isDragging]);
 
-
-    // --- 5. MOUSE EVENTS ---
     const handleMouseDown = (e) => { setIsDragging(true); lastMouseX.current = e.clientX; };
     const handleMouseUp = () => { setIsDragging(false); lastMouseX.current = null; };
     const handleMouseMove = (e) => {
@@ -264,44 +284,23 @@ export default function EthercheckChart({ data, isSummary }) {
         const [currentMin, currentMax] = xDomain;
         const duration = currentMax - currentMin;
         const timeDelta = (pixelDelta / chartWidth) * duration;
-
-        let newMin = currentMin + timeDelta;
-        let newMax = currentMax + timeDelta;
-
-        // Безопасное обновление с проверкой границ
+        let newMin = currentMin + timeDelta; let newMax = currentMax + timeDelta;
         const [origMin, origMax] = originalXDomain;
-        if (newMin < origMin) {
-            const diff = origMin - newMin;
-            newMin += diff;
-            newMax += diff;
-        }
-        if (newMax > origMax) {
-            const diff = newMax - origMax;
-            newMin -= diff;
-            newMax -= diff;
-        }
-
+        if (newMin < origMin) { const diff = origMin - newMin; newMin += diff; newMax += diff; }
+        if (newMax > origMax) { const diff = newMax - origMax; newMin -= diff; newMax -= diff; }
         setXDomain([newMin, newMax]);
         lastMouseX.current = currentClientX;
     };
 
-    // --- 6. RENDER HELPERS ---
     const getNiceTicks = (min, max) => {
         if (min === 0 || max === 0 || min >= max) return [];
         const diff = max - min;
         const ticks = [];
-        const M = 60 * 1000;
-        const H = 60 * M;
-        const D = 24 * H;
+        const M = 60 * 1000; const H = 60 * M; const D = 24 * H;
         let step;
-
-        if (diff <= 2 * H) step = 10 * M;
-        else if (diff <= 6 * H) step = 30 * M;
-        else if (diff <= 12 * H) step = 1 * H;
-        else if (diff <= 24 * H) step = 2 * H;
-        else if (diff <= 2 * D) step = 6 * H;
-        else step = 1 * D;
-
+        if (diff <= 2 * H) step = 10 * M; else if (diff <= 6 * H) step = 30 * M;
+        else if (diff <= 12 * H) step = 1 * H; else if (diff <= 24 * H) step = 2 * H;
+        else if (diff <= 2 * D) step = 6 * H; else step = 1 * D;
         const startOfDay = new Date(min).setHours(0,0,0,0);
         let k = Math.floor((min - startOfDay) / step);
         let current = startOfDay + (k * step);
@@ -310,16 +309,14 @@ export default function EthercheckChart({ data, isSummary }) {
         return ticks;
     };
     const currentTicks = useMemo(() => getNiceTicks(xDomain[0], xDomain[1]), [xDomain]);
-
     const formatAxisTick = (tick) => {
         const date = new Date(tick);
         if ((xDomain[1] - xDomain[0]) > 86400000) return date.toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
         return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     };
-    const formatTooltip = (label) => new Date(label).toLocaleString([], {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'});
 
     if (!chartData || chartData.length === 0) {
-        return <div className="flex items-center justify-center h-full text-slate-500 text-sm text-center p-4">Нет данных для отображения. Выберите параметры и нажмите "Построить график"</div>;
+        return <div className="flex items-center justify-center h-full text-slate-500 text-sm text-center p-4">Нет данных</div>;
     }
 
     return (
@@ -330,10 +327,12 @@ export default function EthercheckChart({ data, isSummary }) {
             onMouseDown={handleMouseDown}
             onMouseMove={handleMouseMove}
             onMouseUp={handleMouseUp}
-            onMouseLeave={handleMouseUp}
+            onMouseLeave={() => {
+                handleMouseUp();
+                setHoveredDataKey(null);
+            }}
         >
             <ResponsiveContainer width="100%" height="100%">
-                {/* ИЗМЕНЕНО: margin.left увеличен с -15 до 10 */}
                 <LineChart data={chartData} margin={{ top: 10, right: 0, left: 10, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} />
                     <XAxis
@@ -347,7 +346,6 @@ export default function EthercheckChart({ data, isSummary }) {
                         tick={{ fill: '#94a3b8', fontSize: 10 }}
                         minTickGap={20}
                     />
-                    {/* ИЗМЕНЕНО: width увеличен с 35 до 45 */}
                     <YAxis
                         stroke="#94a3b8"
                         tick={{ fill: '#94a3b8', fontSize: 10 }}
@@ -356,12 +354,21 @@ export default function EthercheckChart({ data, isSummary }) {
                         domain={yDomain}
                         allowDataOverflow={true}
                     />
+
                     <Tooltip
-                        labelFormatter={formatTooltip}
-                        contentStyle={{ backgroundColor: 'rgba(15, 23, 42, 0.95)', borderColor: '#334155', color: '#f1f5f9', borderRadius: '8px', fontSize: '12px' }}
-                        formatter={(value) => [`${value.toFixed(2)}%`]}
+                        content={
+                            <CustomTooltip
+                                chartHeight={containerHeight}
+                                yDomain={yDomain}
+                                setHoveredDataKey={setHoveredDataKey}
+                            />
+                        }
                         active={!isDragging}
+                        isAnimationActive={false}
+                        cursor={false}
+                        shared={true}
                     />
+
                     <Legend verticalAlign="top" height={36} iconType="circle" wrapperStyle={{ color: '#cbd5e1', fontSize: '12px' }} />
 
                     {finalDatasets.map((ds) => (
@@ -372,8 +379,13 @@ export default function EthercheckChart({ data, isSummary }) {
                             name={ds.name}
                             stroke={ds.stroke}
                             strokeWidth={ds.strokeWidth}
+                            // ВЕРНУЛИ dot={false} - точки невидимы по умолчанию
                             dot={false}
-                            activeDot={{ r: 4 }}
+                            // АКТИВНАЯ ТОЧКА (ПОДСВЕТКА) - видима только если мышь в радиусе 50px
+                            activeDot={(props) => {
+                                if (props.dataKey !== hoveredDataKey) return null;
+                                return <circle cx={props.cx} cy={props.cy} r={6} stroke="#fff" strokeWidth={2} fill={ds.stroke} />;
+                            }}
                             connectNulls={true}
                             isAnimationActive={false}
                         />
