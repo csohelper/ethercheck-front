@@ -186,7 +186,7 @@ export default function EthercheckGraphPage() {
                         <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
                     </div>
                     <h1 className="text-lg md:text-xl font-bold tracking-wide text-white">
-                        Система Мониторинга Сети
+                        Ethercheck
                     </h1>
                 </div>
             </header>
