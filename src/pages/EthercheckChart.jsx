@@ -26,23 +26,22 @@ const CustomTooltip = ({active, payload, label, coordinate, chartHeight, yDomain
             const mouseX = coordinate.x;
             const mouseY = coordinate.y;
 
-            const [xMin, xMax] = xDomain;  // нужно прокинуть xDomain в CustomTooltip
+            const [xMin, xMax] = xDomain;
             const [yMin, yMax] = yDomain;
             const chartH = chartHeight;
-            const chartW = containerRef.current?.clientWidth || 300; // ширина графика
+            const chartW = chartWidth; // вместо containerRef.current
 
             let minDistance = Infinity;
             let closest = null;
 
             payload.forEach(entry => {
-                const xVal = new Date(entry.payload.time).getTime();  // координата X
-                const yVal = typeof entry.value === 'number' ? entry.value : 0;  // координата Y
+                const xVal = new Date(entry.payload.time).getTime();
+                const yVal = typeof entry.value === 'number' ? entry.value : 0;
 
-                // Переводим в пиксели
                 const px = ((xVal - xMin) / (xMax - xMin)) * chartW;
                 const py = chartH - ((yVal - yMin) / (yMax - yMin)) * chartH;
 
-                const dist = Math.hypot(mouseX - px, mouseY - py); // евклидово расстояние
+                const dist = Math.hypot(mouseX - px, mouseY - py);
 
                 if (dist < minDistance) {
                     minDistance = dist;
@@ -58,7 +57,7 @@ const CustomTooltip = ({active, payload, label, coordinate, chartHeight, yDomain
         } else {
             setHoveredDataKey(null);
         }
-    }, [active, payload, coordinate, chartHeight, xDomain, yDomain, setHoveredDataKey]);
+    }, [active, payload, coordinate, chartHeight, chartWidth, xDomain, yDomain, setHoveredDataKey]);
 
 
     if (!active || !payload || !payload.length || !coordinate) return null;
