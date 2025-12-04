@@ -18,8 +18,17 @@ const getLineColor = (index) => {
 // Радиус срабатывания "магнита" в пикселях
 const MAX_HOVER_DISTANCE = 50;
 
-const CustomTooltip = ({active, payload, label, coordinate, chartHeight, yDomain, setHoveredDataKey}) => {
-
+const CustomTooltip = ({
+                           active,
+                           payload,
+                           label,
+                           coordinate,
+                           chartHeight,
+                           chartWidth = 800,
+                           xDomain = [0, 1],
+                           yDomain = [0, 100],
+                           setHoveredDataKey
+                       }) => {
     // Логика определения, над какой линией находится мышь
     useEffect(() => {
         if (active && payload && payload.length && coordinate) {
