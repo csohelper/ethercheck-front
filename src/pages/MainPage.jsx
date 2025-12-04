@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, {useEffect, useState} from "react";
 import EthercheckChart from "./EthercheckChart";
 
 export default function EthercheckGraphPage() {
@@ -51,7 +51,7 @@ export default function EthercheckGraphPage() {
             .then((data) => {
                 if (!mounted) return;
                 let loaded = [];
-                if (data && Array.isArray(data.rooms)) loaded = data.rooms;
+                if (data && typeof data === 'object' && 'rooms' in data && Array.isArray(data.rooms)) loaded = data.rooms;
                 else if (Array.isArray(data)) loaded = data;
 
                 if (loaded.length > 0) {
@@ -65,16 +65,18 @@ export default function EthercheckGraphPage() {
                     // === ВАЖНО: АВТОЗАПУСК ===
                     // Сразу вызываем функцию построения графика для 'total'
                     // Передаем параметры вручную, так как стейт (selectedRooms) обновится не мгновенно
-                    fetchGraph(["total"]);
+                    void fetchGraph(["total"]);
                 }
             })
             .catch((err) => {
                 console.error(err);
-                if (mounted) setRooms(["204", "430", "536"]);
+                if (mounted) setRooms([]);
             })
             .finally(() => mounted && setLoadingRooms(false));
 
-        return () => { mounted = false; };
+        return () => {
+            mounted = false;
+        };
     }, []);
 
     function toggleRoom(roomValue) {
@@ -117,7 +119,6 @@ export default function EthercheckGraphPage() {
         if (!customRooms) setGraphResult(null);
 
         setLoadingGraph(true);
-
         try {
             let roomsParam = "";
 
@@ -127,13 +128,14 @@ export default function EthercheckGraphPage() {
             const targetSummaryMode = customRooms ? false : isSummaryMode;
 
             if (targetSummaryMode) {
-                // Если режим summary, берем все доступные комнаты (из стейта rooms)
-                // Примечание: при автозапуске rooms может быть еще пуст, но мы автозапускаем 'total', так что сюда не попадем
-                roomsParam = rooms.join(",");
+                roomsParam = "summary";
             } else if (targetRooms.includes("total")) {
                 roomsParam = "total";
             } else {
-                if (targetRooms.length === 0) throw new Error("Выберите комнаты");
+                if (targetRooms.length === 0) {
+                    setError("Выберите комнаты");
+                    return;
+                }
                 roomsParam = targetRooms.join(",");
             }
 
@@ -151,7 +153,8 @@ export default function EthercheckGraphPage() {
 
             if (!res.ok) {
                 const text = await res.text();
-                throw new Error(`Ошибка ${res.status}: ${text}`);
+                setError(`Ошибка ${res.status}: ${text}`);
+                return;
             }
 
             const data = await res.json();
@@ -165,8 +168,8 @@ export default function EthercheckGraphPage() {
         }
     }
 
-    const RoomItem = ({ value, label, colorClass = "text-slate-400" }) => {
-        let isSelected = false;
+    const RoomItem = ({value, label, colorClass = "text-slate-400"}) => {
+        let isSelected;
         if (value === 'summary') isSelected = isSummaryMode;
         else if (value === 'total') isSelected = !isSummaryMode && selectedRooms.includes('total');
         else isSelected = !isSummaryMode && selectedRooms.includes(value);
@@ -187,20 +190,27 @@ export default function EthercheckGraphPage() {
         );
     };
 
+    const roomCount = isSummaryMode ? rooms.length : selectedRooms.length;
+
     return (
-        <div className="min-h-screen bg-[#0B1120] text-slate-200 flex flex-col items-center py-4 md:py-8 px-3 md:px-4 font-sans selection:bg-sky-500/30">
+        <div
+            className="min-h-screen bg-[#0B1120] text-slate-200 flex flex-col items-center py-4 md:py-8 px-3 md:px-4 font-sans selection:bg-sky-500/30">
 
             {/* Фоновые эффекты */}
             <div className="fixed top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
-                <div className="absolute top-[-10%] left-[10%] w-[300px] md:w-[500px] h-[300px] md:h-[500px] bg-blue-600/10 rounded-full blur-[60px] md:blur-[100px]" />
-                <div className="absolute bottom-[-10%] right-[10%] w-[300px] md:w-[500px] h-[300px] md:h-[500px] bg-purple-600/10 rounded-full blur-[60px] md:blur-[100px]" />
+                <div
+                    className="absolute top-[-10%] left-[10%] w-[300px] md:w-[500px] h-[300px] md:h-[500px] bg-blue-600/10 rounded-full blur-[60px] md:blur-[100px]"/>
+                <div
+                    className="absolute bottom-[-10%] right-[10%] w-[300px] md:w-[500px] h-[300px] md:h-[500px] bg-purple-600/10 rounded-full blur-[60px] md:blur-[100px]"/>
             </div>
 
             {/* Заголовок */}
-            <header className="w-full max-w-6xl flex flex-col md:flex-row items-center md:justify-start gap-3 mb-6 md:mb-8 z-10 text-center md:text-left">
+            <header
+                className="w-full max-w-6xl flex flex-col md:flex-row items-center md:justify-start gap-3 mb-6 md:mb-8 z-10 text-center md:text-left">
                 <div className="flex items-center gap-3">
                     <div className="relative flex h-3 w-3">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-75"></span>
+                        <span
+                            className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-75"></span>
                         <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
                     </div>
                     <h1 className="text-lg md:text-xl font-bold tracking-wide text-white">
@@ -210,16 +220,17 @@ export default function EthercheckGraphPage() {
             </header>
 
             {/* Панель управления */}
-            <div className="w-full max-w-6xl bg-slate-900/80 backdrop-blur-xl rounded-2xl border border-slate-800 shadow-2xl p-4 md:p-6 z-10">
+            <div
+                className="w-full max-w-6xl bg-slate-900/80 backdrop-blur-xl rounded-2xl border border-slate-800 shadow-2xl p-4 md:p-6 z-10">
 
                 {/* Кнопки времени (скролл на мобильных) */}
                 <div className="flex overflow-x-auto pb-2 md:pb-0 gap-2 mb-6 custom-scrollbar">
                     {[
-                        { label: '1 час', val: 1 },
-                        { label: '3 часа', val: 3 },
-                        { label: '12 часов', val: 12 },
-                        { label: 'Сутки', val: 24 },
-                        { label: 'Сегодня', val: 'today' }
+                        {label: '1 час', val: 1},
+                        {label: '3 часа', val: 3},
+                        {label: '12 часов', val: 12},
+                        {label: 'Сутки', val: 24},
+                        {label: 'Сегодня', val: 'today'}
                     ].map((btn) => (
                         <button
                             key={btn.label}
@@ -261,7 +272,7 @@ export default function EthercheckGraphPage() {
                     <div className="flex flex-col h-[250px] md:h-[280px]">
                         <div className="flex justify-between items-center mb-2">
                             <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                                Комнаты ({selectedRooms.length})
+                                Комнаты ({roomCount})
                             </span>
                             <div className="flex gap-3">
                                 <button
@@ -279,7 +290,8 @@ export default function EthercheckGraphPage() {
                             </div>
                         </div>
 
-                        <div className="flex-1 bg-[#0F172A] border border-slate-700 rounded-xl overflow-hidden flex flex-col">
+                        <div
+                            className="flex-1 bg-[#0F172A] border border-slate-700 rounded-xl overflow-hidden flex flex-col">
                             {loadingRooms ? (
                                 <div className="flex items-center justify-center h-full text-xs text-slate-500">
                                     Загрузка...
@@ -296,9 +308,9 @@ export default function EthercheckGraphPage() {
                                         label="★ Суммарно"
                                         colorClass="text-amber-400 font-medium"
                                     />
-                                    <div className="h-[1px] bg-slate-800 my-2 mx-1" />
+                                    <div className="h-[1px] bg-slate-800 my-2 mx-1"/>
                                     {rooms.map((room) => (
-                                        <RoomItem key={room} value={room} label={`Комната ${room}`} />
+                                        <RoomItem key={room} value={room} label={`Комната ${room}`}/>
                                     ))}
                                 </div>
                             )}
@@ -317,7 +329,10 @@ export default function EthercheckGraphPage() {
                     </button>
 
                     <button
-                        onClick={() => { setGraphResult(null); setError(null); }}
+                        onClick={() => {
+                            setGraphResult(null);
+                            setError(null);
+                        }}
                         className="w-full md:w-auto px-6 py-3 rounded-xl border border-slate-700 text-white hover:bg-slate-800 transition-colors font-medium"
                     >
                         Очистить
@@ -326,31 +341,41 @@ export default function EthercheckGraphPage() {
             </div>
 
             {/* Блок графика */}
-            <div className="w-full max-w-6xl mt-6 md:mt-8 bg-slate-900/80 backdrop-blur-xl rounded-2xl border border-slate-800 shadow-2xl p-4 md:p-8 z-10">
+            <div
+                className="w-full max-w-6xl mt-6 md:mt-8 bg-slate-900/80 backdrop-blur-xl rounded-2xl border border-slate-800 shadow-2xl p-4 md:p-8 z-10">
                 <div className="flex items-center justify-between mb-4 md:mb-6">
                     <h2 className="text-base md:text-lg font-semibold text-white">
                         Мониторинг
                     </h2>
                     {graphResult && (
-                        <span className="text-[10px] md:text-xs text-slate-500 bg-slate-950 px-2 py-1 rounded border border-slate-800">
+                        <span
+                            className="text-[10px] md:text-xs text-slate-500 bg-slate-950 px-2 py-1 rounded border border-slate-800">
                             {new Date().toLocaleTimeString()}
                         </span>
                     )}
                 </div>
 
-                <div className="w-full h-[350px] md:h-[500px] bg-[#0B1120] border border-slate-800 rounded-xl p-2 md:p-4 relative overflow-hidden">
+                <div
+                    className="w-full h-[350px] md:h-[500px] bg-[#0B1120] border border-slate-800 rounded-xl p-2 md:p-4 relative overflow-hidden">
 
                     {!graphResult && !loadingGraph && (
-                        <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-500 pointer-events-none text-center px-4">
-                            <svg className="w-10 h-10 md:w-12 md:h-12 mb-3 opacity-20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"></path></svg>
+                        <div
+                            className="absolute inset-0 flex flex-col items-center justify-center text-slate-500 pointer-events-none text-center px-4">
+                            <svg className="w-10 h-10 md:w-12 md:h-12 mb-3 opacity-20" fill="none" stroke="currentColor"
+                                 viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5"
+                                      d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"></path>
+                            </svg>
                             <p className="text-xs md:text-sm">Выберите параметры и нажмите «Построить график»</p>
                         </div>
                     )}
 
                     {loadingGraph && (
-                        <div className="absolute inset-0 flex flex-col items-center justify-center text-sky-500 z-20 bg-[#0B1120]/50 backdrop-blur-sm">
+                        <div
+                            className="absolute inset-0 flex flex-col items-center justify-center text-sky-500 z-20 bg-[#0B1120]/50 backdrop-blur-sm">
                             <div className="relative flex h-8 w-8 mb-3">
-                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-sky-500 opacity-75"></span>
+                                <span
+                                    className="animate-ping absolute inline-flex h-full w-full rounded-full bg-sky-500 opacity-75"></span>
                                 <span className="relative inline-flex rounded-full h-8 w-8 bg-sky-600"></span>
                             </div>
                             <span className="text-xs font-semibold tracking-wider uppercase">Загрузка данных...</span>
@@ -358,20 +383,24 @@ export default function EthercheckGraphPage() {
                     )}
 
                     {graphResult && (
-                        <EthercheckChart data={graphResult} isSummary={isSummaryMode} />
+                        <EthercheckChart data={graphResult} isSummary={isSummaryMode}/>
                     )}
                 </div>
             </div>
 
             {error && (
-                <div className="fixed bottom-4 right-4 md:bottom-8 md:right-8 max-w-[90%] md:max-w-md bg-red-900/95 text-white pl-5 pr-10 py-4 rounded-xl shadow-2xl border border-red-500/50 backdrop-blur animate-bounce-in z-50">
+                <div
+                    className="fixed bottom-4 right-4 md:bottom-8 md:right-8 max-w-[90%] md:max-w-md bg-red-900/95 text-white pl-5 pr-10 py-4 rounded-xl shadow-2xl border border-red-500/50 backdrop-blur animate-bounce-in z-50">
                     <div className="font-bold text-sm mb-1">Ошибка</div>
                     <div className="text-xs opacity-90 break-words">{error}</div>
                     <button
                         onClick={() => setError(null)}
                         className="absolute top-2 right-2 p-1 text-white/50 hover:text-white hover:bg-white/10 rounded-full transition-colors"
                     >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
+                                  d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
                     </button>
                 </div>
             )}
