@@ -39,5 +39,9 @@
       "last 1 safari version"
     ]
   },
-  "proxy": "https://monitor.slavapmk.ru"
+  "proxy": "https://monitor.slavapmk.ru",
+  "devDependencies": {
+    "typescript": "^4.9.5",
+    "yaml": "^2.8.2"
+  }
 }
