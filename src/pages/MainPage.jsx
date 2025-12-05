@@ -80,6 +80,8 @@ export default function EthercheckGraphPage() {
     }, []);
 
     function toggleRoom(roomValue) {
+        setGraphResult(null);
+
         if (roomValue === "total") {
             setSelectedRooms(['total']);
             setIsSummaryMode(false);
