@@ -3,8 +3,6 @@ WORKDIR /app
 
 COPY package*.json ./
 RUN npm ci
-COPY . .
-RUN npm prune --production
 
 COPY . .
 RUN npm run build
